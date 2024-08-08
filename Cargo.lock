@@ -19,14 +19,12 @@ dependencies = [
 [[package]]
 name = "cc"
 version = "1.0.82"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "305fe645edc1442a0fa8b6726ba61d422798d37a52e12eaecf4b022ebbb88f01"
+source = "git+https://github.com/numas13/e2k-cc-rs.git?tag=e2k-1.0.82#7787dbc10386a7ce706b2e9379ebbd87f1e4abfe"
 dependencies = [
  "libc",
 ]
 
 [[package]]
 name = "libc"
-version = "0.2.155"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
+version = "0.2.154"
+source = "git+https://github.com/numas13/e2k-libc.git?tag=e2k-0.2.154#fa9f8070c885504e8e2cfd79b21774c1c3cff30f"

@@ -11,6 +11,7 @@ rust-version = "1.64"
 level = "allow"
 check-cfg = [
     'cfg(has_asm)',
+    'cfg(target_arch, values("e2k", "e2k64"))',
 ]
 
 [dependencies]
@@ -21,3 +22,7 @@ cc = "1.0.82"
 
 [profile.release]
 strip = "debuginfo"
+
+[patch.crates-io]
+cc = { tag = "e2k-1.0.82", git = "https://github.com/numas13/e2k-cc-rs.git" }
+libc = { tag = "e2k-0.2.154", git = "https://github.com/numas13/e2k-libc.git" }

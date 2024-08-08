@@ -19,4 +19,7 @@ fn compile(path: &str) {
 fn main() {
     #[cfg(target_arch = "x86_64")]
     compile("x86_64.S");
+
+    #[cfg(any(target_arch = "e2k64", target_arch = "e2k"))]
+    compile("e2k.S");
 }
