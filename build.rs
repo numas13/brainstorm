@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 fn compile(path: &str) {
     let path = format!("src/asm/{path}");
     println!("cargo:rerun-if-changed=src/asm/common.h");
@@ -17,9 +16,10 @@ fn compile(path: &str) {
 }
 
 fn main() {
-    #[cfg(target_arch = "x86_64")]
-    compile("x86_64.S");
-
-    #[cfg(any(target_arch = "e2k64", target_arch = "e2k"))]
-    compile("e2k.S");
+    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+    match target_arch.as_str() {
+        "x86_64" => compile("x86_64.S"),
+        "e2k" | "e2k64" => compile("e2k.S"),
+        _ => {}
+    }
 }
