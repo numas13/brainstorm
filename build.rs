@@ -20,6 +20,7 @@ fn main() {
     match target_arch.as_str() {
         "x86_64" => compile("x86_64.S"),
         "e2k" | "e2k64" => compile("e2k.S"),
+        "riscv64" => compile("riscv64.S"),
         _ => {}
     }
 }
