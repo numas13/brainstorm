@@ -12,6 +12,9 @@ mod cli;
 #[cfg(has_asm)]
 mod asm;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct OutOfBoundsError;
+
 const TAPE_SIZE: usize = 1024 * 8;
 
 const OPCODE_CALL: i16 = 1;
@@ -231,7 +234,7 @@ fn getc() -> u8 {
     buf[0]
 }
 
-fn execute_impl<const TRACE: bool>(code: &[Insn], tape: &mut [u8]) {
+fn execute_impl<const TRACE: bool>(code: &[Insn], tape: &mut [u8]) -> Result<(), OutOfBoundsError> {
     let mut pc = 0;
     let mut i: usize = 0;
 
@@ -242,7 +245,7 @@ fn execute_impl<const TRACE: bool>(code: &[Insn], tape: &mut [u8]) {
 
         i = i.wrapping_add(insn.mov() as usize);
 
-        let cell = &mut tape[i];
+        let cell = tape.get_mut(i).ok_or(OutOfBoundsError)?;
         *cell = cell.wrapping_add(insn.add() as u8);
 
         pc += 1;
@@ -260,17 +263,19 @@ fn execute_impl<const TRACE: bool>(code: &[Insn], tape: &mut [u8]) {
             }
         }
     }
+
+    Ok(())
 }
 
-fn execute(code: &[Insn], tape: &mut [u8]) {
-    execute_impl::<false>(code, tape);
+fn execute(code: &[Insn], tape: &mut [u8]) -> Result<(), OutOfBoundsError> {
+    execute_impl::<false>(code, tape)
 }
 
-fn execute_dump(code: &[Insn], tape: &mut [u8]) {
-    execute_impl::<true>(code, tape);
+fn execute_dump(code: &[Insn], tape: &mut [u8]) -> Result<(), OutOfBoundsError> {
+    execute_impl::<true>(code, tape)
 }
 
-fn run(cli: &Cli, code: &[Insn]) {
+fn run(cli: &Cli, code: &[Insn]) -> Result<(), OutOfBoundsError> {
     let mut tape = vec![0_u8; TAPE_SIZE];
 
     if cli.trace {
@@ -278,19 +283,17 @@ fn run(cli: &Cli, code: &[Insn]) {
 
         #[cfg(has_asm)]
         if !cli.reference {
-            asm::execute_dump(code, &mut tape);
-            return;
+            return asm::execute_dump(code, &mut tape);
         }
 
-        execute_dump(code, &mut tape);
+        execute_dump(code, &mut tape)
     } else {
         #[cfg(has_asm)]
         if !cli.reference {
-            asm::execute(code, &mut tape);
-            return;
+            return asm::execute(code, &mut tape);
         }
 
-        execute(code, &mut tape);
+        execute(code, &mut tape)
     }
 }
 
@@ -315,12 +318,18 @@ fn main() {
     }
 
     if !cli.no_exec {
-        if cli.time {
+        let res = if cli.time {
             let start = Instant::now();
-            run(&cli, &code);
-            println!("Execution time {:.2?}", start.elapsed());
+            let res = run(&cli, &code);
+            eprintln!("Execution time {:.2?}", start.elapsed());
+            res
         } else {
-            run(&cli, &code);
+            run(&cli, &code)
+        };
+
+        if let Err(OutOfBoundsError) = res {
+            eprintln!("error: out of bounds");
+            std::process::exit(1);
         }
     }
 }
@@ -334,14 +343,30 @@ mod tests {
         let code = parse(src);
 
         let mut tape = [0; 512];
-        execute(&code, &mut tape);
+        execute(&code, &mut tape).unwrap();
         assert_eq!(&tape[..expect.len()], expect, "rust");
 
         #[cfg(has_asm)]
         {
             let mut tape = [0; 512];
-            asm::execute(&code, &mut tape);
+            asm::execute(&code, &mut tape).unwrap();
             assert_eq!(&tape[..expect.len()], expect, "assembly");
+        }
+    }
+
+    #[track_caller]
+    fn test_err(len: usize, src: &str) {
+        let code = parse(src);
+
+        let mut tape = vec![0; len];
+        let res = execute(&code, &mut tape);
+        assert_eq!(res, Err(OutOfBoundsError), "rust");
+
+        #[cfg(has_asm)]
+        {
+            let mut tape = vec![0; len];
+            let res = asm::execute(&code, &mut tape);
+            assert_eq!(res, Err(OutOfBoundsError), "assembly");
         }
     }
 
@@ -368,5 +393,11 @@ mod tests {
         test("+>+++[-]>++", &[1, 0, 2, 0]);
         test("+++[>+++++<-]>>++++++", &[0, 15, 6, 0]);
         test("+++[>+++[>+++++<-]<-]", &[0, 0, 45, 0]);
+    }
+
+    #[test]
+    fn out_of_bounds() {
+        test_err(4, "<+");
+        test_err(4, ">>>>>>>>+");
     }
 }

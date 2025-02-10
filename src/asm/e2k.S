@@ -296,12 +296,17 @@ loop:
 exit:
     {
         return          %ctpr3
+        addd,0          0,0,%r0
         wasted_cycles 5
     }
         ct              %ctpr3
 
 out_of_bounds:
-        ldb,0           0,0,%g31                        // i is out of bounds
-        addd,0          %g31,0,%empty
+    {
+        return          %ctpr3
+        addd,0          0,1,%r0
+        wasted_cycles 5
+    }
+        ct              %ctpr3
 
     .size FUNCTION_NAME, . - FUNCTION_NAME

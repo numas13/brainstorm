@@ -20,7 +20,13 @@ FUNCTION_NAME:
     li      s5,0                // i
     j       .L_loop
 
+.L_out_of_bounds:
+    li      a0,1
+    j       1f
+
 .L_exit:
+    li      a0,0
+1:
     ld      s5,8(sp)
     ld      s4,16(sp)
     ld      s3,24(sp)
@@ -86,8 +92,5 @@ FUNCTION_NAME:
     add     t0,s2,s5            // address of tape[i]
     sb      a0,0(t0)            // override cell
     j       .L_loop
-
-.L_out_of_bounds:
-    lb      zero,(zero)         // out of bounds
 
     .size FUNCTION_NAME, . - FUNCTION_NAME

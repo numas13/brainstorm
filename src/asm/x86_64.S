@@ -19,7 +19,13 @@ FUNCTION_NAME:
     xor     %r15,%r15           // i
     jmp     .L_loop
 
+.L_out_of_bounds:
+    mov     $1,%rax
+    jmp     1f
+
 .L_exit:
+    xor     %rax,%rax
+1:
     pop     %r15
     pop     %r14
     pop     %r13
@@ -98,8 +104,5 @@ FUNCTION_NAME:
     pop     %rcx                // restore pc
     mov     %al,(%r13,%r15)     // override cell
     jmp     .L_loop
-
-.L_out_of_bounds:
-    ud2                         // out of bounds
 
     .size FUNCTION_NAME, . - FUNCTION_NAME

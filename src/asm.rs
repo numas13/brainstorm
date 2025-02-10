@@ -1,33 +1,48 @@
 use std::slice;
 
-use super::Insn;
+use crate::{Insn, OutOfBoundsError};
 
 const INSN_SIZE: usize = std::mem::size_of::<Insn>();
 
 extern "C" {
-    fn bf_execute(code: *const Insn, code_size: usize, tape: *mut u8, tape_size: usize);
-    fn bf_execute_dump(code: *const Insn, code_size: usize, tape: *mut u8, tape_size: usize);
+    fn bf_execute(code: *const Insn, code_size: usize, tape: *mut u8, tape_size: usize) -> isize;
+    fn bf_execute_dump(
+        code: *const Insn,
+        code_size: usize,
+        tape: *mut u8,
+        tape_size: usize,
+    ) -> isize;
 }
 
-pub(crate) fn execute(code: &[Insn], tape: &mut [u8]) {
-    unsafe {
+pub(crate) fn execute(code: &[Insn], tape: &mut [u8]) -> Result<(), OutOfBoundsError> {
+    let res = unsafe {
         bf_execute(
             code.as_ptr(),
             code.len() * INSN_SIZE,
             tape.as_mut_ptr(),
             tape.len(),
-        );
+        )
+    };
+    if res == 0 {
+        Ok(())
+    } else {
+        Err(OutOfBoundsError)
     }
 }
 
-pub(crate) fn execute_dump(code: &[Insn], tape: &mut [u8]) {
-    unsafe {
+pub(crate) fn execute_dump(code: &[Insn], tape: &mut [u8]) -> Result<(), OutOfBoundsError> {
+    let res = unsafe {
         bf_execute_dump(
             code.as_ptr(),
             code.len() * INSN_SIZE,
             tape.as_mut_ptr(),
             tape.len(),
-        );
+        )
+    };
+    if res == 0 {
+        Ok(())
+    } else {
+        Err(OutOfBoundsError)
     }
 }
 
