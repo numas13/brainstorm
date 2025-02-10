@@ -8,7 +8,7 @@ pub struct Cli {
     pub dump: bool,
     pub no_exec: bool,
     pub reference: bool,
-    pub path: String,
+    pub path: Option<String>,
 }
 
 pub fn parse_cli() -> Cli {
@@ -34,9 +34,7 @@ pub fn parse_cli() -> Cli {
         .help("Do not use executor written in assembly")
         .switch();
 
-    let path = positional("FILE")
-        .help("File to process")
-        .fallback("main.bf".into());
+    let path = positional("FILE").help("File to process").optional();
 
     construct!(Cli {
         time,
@@ -48,6 +46,5 @@ pub fn parse_cli() -> Cli {
     })
     .to_options()
     .descr("This is a description")
-    .fallback_to_usage()
     .run()
 }

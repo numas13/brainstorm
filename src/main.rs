@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Write},
     fs,
-    io::{self, Read},
+    io::{self, BufRead, Read, Write as _},
     time::Instant,
 };
 
@@ -275,7 +275,7 @@ fn execute_dump(code: &[Insn], tape: &mut [u8]) -> Result<(), OutOfBoundsError> 
     execute_impl::<true>(code, tape)
 }
 
-fn run(cli: &Cli, code: &[Insn]) -> Result<(), OutOfBoundsError> {
+fn run_once(cli: &Cli, code: &[Insn]) -> Result<(), OutOfBoundsError> {
     let mut tape = vec![0_u8; TAPE_SIZE];
 
     if cli.trace {
@@ -297,19 +297,8 @@ fn run(cli: &Cli, code: &[Insn]) -> Result<(), OutOfBoundsError> {
     }
 }
 
-fn main() {
-    let cli = cli::parse_cli();
-    let src = match fs::read_to_string(&cli.path) {
-        Ok(src) => src,
-        Err(err) => {
-            eprintln!("Error: Failed to read \"{}\"", cli.path);
-            eprintln!();
-            eprintln!("Caused by:");
-            eprintln!("    0: {err}");
-            std::process::exit(1);
-        }
-    };
-    let code = parse(&src);
+fn run(cli: &Cli, src: &str) -> Result<(), OutOfBoundsError> {
+    let code = parse(src);
 
     if cli.dump {
         println!("{}", src.trim());
@@ -318,18 +307,70 @@ fn main() {
     }
 
     if !cli.no_exec {
-        let res = if cli.time {
-            let start = Instant::now();
-            let res = run(&cli, &code);
+        let start = Instant::now();
+        run_once(cli, &code)?;
+        if cli.time {
             eprintln!("Execution time {:.2?}", start.elapsed());
-            res
-        } else {
-            run(&cli, &code)
+        }
+    }
+
+    Ok(())
+}
+
+fn main() {
+    let mut cli = cli::parse_cli();
+
+    if let Some(path) = &cli.path {
+        let src = match fs::read_to_string(path) {
+            Ok(src) => src,
+            Err(err) => {
+                eprintln!("Error: Failed to read \"{path}\"");
+                eprintln!();
+                eprintln!("Caused by:");
+                eprintln!("    0: {err}");
+                std::process::exit(1);
+            }
         };
 
-        if let Err(OutOfBoundsError) = res {
+        if let Err(OutOfBoundsError) = run(&cli, &src) {
             eprintln!("error: out of bounds");
             std::process::exit(1);
+        }
+    } else {
+        let mut line = String::new();
+        loop {
+            print!(">>> ");
+            io::stdout().lock().flush().unwrap();
+            line.clear();
+            io::stdin().lock().read_line(&mut line).unwrap();
+            if line.is_empty() {
+                println!();
+                break;
+            }
+
+            fn switch_info(state: bool, name: &str) {
+                println!("{name} is {}", if state { "on" } else { "off" });
+            }
+
+            match line.trim() {
+                "help" => {
+                    println!("trace       Toggle tracing");
+                    println!("time        Toggle time");
+                }
+                "time" => {
+                    cli.time = !cli.time;
+                    switch_info(cli.time, "time");
+                }
+                "trace" => {
+                    cli.trace = !cli.trace;
+                    switch_info(cli.trace, "trace");
+                }
+                _ => {
+                    if let Err(OutOfBoundsError) = run(&cli, &line) {
+                        println!("error: out of bounds");
+                    }
+                }
+            }
         }
     }
 }
